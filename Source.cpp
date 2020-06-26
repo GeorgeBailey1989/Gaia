@@ -256,8 +256,8 @@ map<const string, const int> BUTTON{
 	{ "height", 48 }
 };
 map<const string, const int> MENUBUTTON{
-	{ "width", 24 },
-	{ "height", 24 }
+	{ "width", 36 },
+	{ "height", 36 }
 };
 list<int> MENUS[menuCount]{
 	{branch, leaf, tubule, mushroom},
@@ -1585,6 +1585,7 @@ public:
 } Game;
 class GameController{ // handles all user input and calls to "Game"
 protected:
+	const string buttonPath = "textures/Buttons/", menuButtonPath = buttonPath + "Menu/", extension = ".png";
 	int selectedType = unitCount;
 	int selectedMenu = plants;
 	void AddUnit(sf::Vector2f& pos){
@@ -1625,11 +1626,10 @@ protected:
 		}
 		const sf::Vector2f getPosition(){ return button.getPosition(); }
 		virtual void PressButton(){}
-		Button(const sf::Vector2f& or, int& texture, map<const string, const int>& data){
-			string path = "textures/Buttons/" + to_string(texture) + ".png";
-			buttonTexture.loadFromFile(path);
+		Button(const sf::Vector2f& or, string& texture, map<const string, const int>& data){
+			buttonTexture.loadFromFile(texture + GC.extension);
 			button.setTexture(buttonTexture);
-			//button.setTextureRect(sf::IntRect(0, 0, data["width"], data["height"]));
+			button.setTextureRect(sf::IntRect(0, 0, data["width"], data["height"]));
 			button.setPosition(or);
 		}
 	};
@@ -1640,29 +1640,29 @@ protected:
 		virtual void PressButton(){
 			GC.selectedType = type;
 		}
-		UnitButton(const sf::Vector2f& or, int& type, map<const string, const int>& data): type(type), Button(or, type, data){}
+		UnitButton(const sf::Vector2f& or, int& type, string& texture, map<const string, const int>& data): type(type), Button(or, texture, data){}
 	};
 	class MenuButton : public UnitButton{
 	public:
 		virtual void PressButton(){
 			GC.selectedMenu = type;
 		}
-		MenuButton(const sf::Vector2f& or, int& type, map<const string, const int>& data) : UnitButton(or, type, data){}
+		MenuButton(const sf::Vector2f& or, int& type, string& texture, map<const string, const int>& data) : UnitButton(or, type, texture, data){}
 	};
 	class Menu{
 	protected:
-		list<UnitButton> buttons;
+		list<shared_ptr<UnitButton>> buttons;
 	public:
 		void Update(){
-			for (list<UnitButton>::iterator it = buttons.begin(); it != buttons.end(); ++it){
-				it->Update();
+			for (list<shared_ptr<UnitButton>>::iterator it = buttons.begin(); it != buttons.end(); ++it){
+				(*it)->Update();
 			}
 		}
 		void ButtonPress(const sf::Vector2f& xy){
-			for (list <UnitButton>::iterator it = buttons.begin(); it != buttons.end(); ++it){
-				sf::Vector2f pos = it->getPosition();
+			for (list <shared_ptr<UnitButton>>::iterator it = buttons.begin(); it != buttons.end(); ++it){
+				sf::Vector2f pos = (*it)->getPosition();
 				if (RectContains(sf::FloatRect(pos.x, pos.y, BUTTON["width"], BUTTON["height"]), xy)){
-					it->PressButton();
+					(*it)->PressButton();
 				}
 			}
 		}
@@ -1670,54 +1670,53 @@ protected:
 		Menu(list<int>& types, const sf::Vector2f& pos){
 			sf::Vector2f xy = pos;
 			for (list<int>::iterator it = types.begin(); it != types.end(); ++it){
-				buttons.push_back(UnitButton(xy, *it, BUTTON));
+				buttons.push_back(make_shared<UnitButton>(xy, *it, GC.buttonPath + to_string(*it), BUTTON));
 				xy.x += BUTTON["width"];
 			}
 		}
 	};
 	class Menus{
 	protected:
-		list<MenuButton> menuButtons;
-		list<Menu> menus;
+		list<shared_ptr<MenuButton>> menuButtons;
+		list<shared_ptr<Menu>> menus;
 	public:
 		void Update(){
-			for (list<MenuButton>::iterator it = menuButtons.begin(); it != menuButtons.end(); ++it){
-				it->Update();
+			for (list<shared_ptr<MenuButton>>::iterator it = menuButtons.begin(); it != menuButtons.end(); ++it){
+				(*it)->Update();
 			}
 			int count = 0;
-			for (list<Menu>::iterator it = menus.begin(); it != menus.end(); ++it){
+			for (list<shared_ptr<Menu>>::iterator it = menus.begin(); it != menus.end(); ++it){
 				if (count == GC.selectedMenu){
-					it->Update();
+					(*it)->Update();
 				}
 				++count;
 			}
 		}
 		void Click(const sf::Vector2f& xy){
 			if (xy.y < GV.GetWindowHeight() - BUTTON["height"]){
-				for (list <MenuButton>::iterator it = menuButtons.begin(); it != menuButtons.end(); ++it){
-					sf::Vector2f pos = it->getPosition();
+				for (list <shared_ptr<MenuButton>>::iterator it = menuButtons.begin(); it != menuButtons.end(); ++it){
+					sf::Vector2f pos = (*it)->getPosition();
 					if (RectContains(sf::FloatRect(pos.x, pos.y, MENUBUTTON["width"], MENUBUTTON["height"]), xy)){
-						it->PressButton();
+						(*it)->PressButton();
 						return;
 					}
 				}
 			}
 			else {
 				int count = 0;
-				for (list<Menu>::iterator it = menus.begin(); it != menus.end(); ++it){
+				for (list<shared_ptr<Menu>>::iterator it = menus.begin(); it != menus.end(); ++it){
 					if (count == GC.selectedMenu){
-						it->ButtonPress(xy);
+						(*it)->ButtonPress(xy);
 						return;
 					}
 					++count;
 				}
 			}
-			//menus[GC.selectedMenu].ButtonPress(xy);
 		}
 		Menus(){
 			for (int i = 0; i < menuCount; ++i){
-				menuButtons.push_back(MenuButton(sf::Vector2f(0 + MENUBUTTON["width"] * i, GV.GetWindowHeight() - MENUBUTTON["height"] - BUTTON["height"]), i, MENUBUTTON));
-				menus.push_back(Menu(MENUS[i], sf::Vector2f(0, GV.GetWindowHeight() - BUTTON["height"])));
+				menuButtons.push_back(make_shared<MenuButton>(sf::Vector2f(0 + MENUBUTTON["width"] * i, GV.GetWindowHeight() - MENUBUTTON["height"] - BUTTON["height"]), i, GC.menuButtonPath + to_string(i), MENUBUTTON));
+				menus.push_back(make_shared<Menu>(MENUS[i], sf::Vector2f(0, GV.GetWindowHeight() - BUTTON["height"])));
 			}
 		}
 	} UnitMenus;
