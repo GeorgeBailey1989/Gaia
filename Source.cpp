@@ -275,24 +275,6 @@ protected:
 	map<int, shared_ptr<sf::Texture>> missileTextures;
 public:
 	// Getters
-	void MakeLine(const sf::Vector2f& end1, const sf::Vector2f& end2, const float& thickness){
-		sf::RectangleShape line(sf::Vector2f(CalcDist(end1, end2), thickness));
-		line.setOrigin(0, thickness / 2);
-		line.rotate(90 - (CalcAngle(end1, end2) / (Pi / 180)));
-		line.setPosition(end1);
-		line.setFillColor(sf::Color::White);
-		window.draw(line);
-	}
-	void EvenlySpace(list<shared_ptr<sf::Sprite>>& li, const sf::Vector2f& start, const sf::Vector2f& end){
-		int counter = 1;
-		float distance = CalcDist(start, end);
-		float angle = CalcAngle(start, end);
-		float scalingFactor = distance * (1 / (float)li.size());
-		for (list<shared_ptr<sf::Sprite>>::iterator it = li.begin(); it != li.end(); it++, counter++){
-			(*it)->setPosition(start.x + (sin(angle) * scalingFactor * counter), start.y + (cos(angle) * scalingFactor * counter));
-			window.draw(**it);
-		}
-	}
 	const int& GetWindowWidth(){
 		return window_width;
 	}
@@ -310,6 +292,25 @@ public:
 	}
 	shared_ptr<sf::Texture>& GetMissileTexture(const int& i){
 		return missileTextures[i];
+	}
+	// Drawing Functions
+	void MakeLine(const sf::Vector2f& end1, const sf::Vector2f& end2, const float& thickness){
+		sf::RectangleShape line(sf::Vector2f(CalcDist(end1, end2), thickness));
+		line.setOrigin(0, thickness / 2);
+		line.rotate(90 - (CalcAngle(end1, end2) / (Pi / 180)));
+		line.setPosition(end1);
+		line.setFillColor(sf::Color::White);
+		window.draw(line);
+	}
+	void EvenlySpace(list<shared_ptr<sf::Sprite>>& li, const sf::Vector2f& start, const sf::Vector2f& end){
+		int counter = 1;
+		float distance = CalcDist(start, end);
+		float angle = CalcAngle(start, end);
+		float scalingFactor = distance * (1 / (float)li.size());
+		for (list<shared_ptr<sf::Sprite>>::iterator it = li.begin(); it != li.end(); it++, counter++){
+			(*it)->setPosition(start.x + (sin(angle) * scalingFactor * counter), start.y + (cos(angle) * scalingFactor * counter));
+			window.draw(**it);
+		}
 	}
 	void Draw(sf::Sprite& sprite){
 		window.draw(sprite);
